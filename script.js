@@ -17,50 +17,11 @@ let running = false;
 
 let paintParticles = [];
 
+
 const TAU = Math.PI * 2;
-
-const flowers = [
-    {
-        x: -250,
-        y: -110,
-        r: 58,
-        petals: 20,
-        curve: -24
-    },
-
-    {
-        x: -105,
-        y: -220,
-        r: 72,
-        petals: 23,
-        curve: -8
-    },
-
-    {
-        x: 95,
-        y: -180,
-        r: 65,
-        petals: 22,
-        curve: 12
-    },
-
-    {
-        x: 245,
-        y: -115,
-        r: 58,
-        petals: 20,
-        curve: 29
-    },
-
-    {
-        x: 5,
-        y: -62,
-        r: 51,
-        petals: 19,
-        curve: 2
-    }
-];
-
+// ==========================
+// FUNCIONES ALEATORIAS
+// ==========================
 
 const random = (min, max) => {
     return min + Math.random() * (max - min);
@@ -71,23 +32,109 @@ const randomItem = (array) => {
 };
 
 
+// ==========================
+// ESTRELLAS
+// ==========================
+
+const stars = [];
+
+for (let i = 0; i < 90; i++) {
+
+    stars.push({
+        x: Math.random(),
+        y: Math.random() * 0.72,
+        size: random(1.5, 3),
+        phase: random(0, TAU)
+    });
+
+}
+
+const flowers = [
+    {
+        x: -250,
+        y: -110,
+        r: 78,
+        petals: 20,
+        curve: 150
+    },
+
+    {
+        x: -105,
+        y: -220,
+        r: 92,
+        petals: 23,
+        curve: 100
+    },
+
+    {
+        x: 95,
+        y: -180,
+        r: 85,
+        petals: 22,
+        curve: -100
+    },
+
+    {
+        x: 245,
+        y: -115,
+        r: 78,
+        petals: 20,
+        curve: -150
+    },
+
+    {
+        x: 5,
+        y: -62,
+        r: 71,
+        petals: 19,
+        curve: 2
+    }
+];
+
+
+// ==========================================
+// RESPONSIVE DEL CANVAS
+// ==========================================
+
 function resizeCanvas() {
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(
+        window.devicePixelRatio || 1,
+        2
+    );
 
     W = window.innerWidth;
     H = window.innerHeight;
+
+
+    // ==========================================
+    // ESCALA GENERAL DE LA OBRA
+    // ==========================================
+
+    /*
+        La composición original está diseñada
+        para aproximadamente 1000 x 750.
+
+        En celular se mantiene la misma
+        proporción, pero se reduce completa.
+    */
 
     S = Math.min(
         W / 1000,
         H / 750
     );
 
+
+    // ==========================================
+    // CANVAS DE ALTA CALIDAD
+    // ==========================================
+
     canvas.width = W * dpr;
     canvas.height = H * dpr;
 
     canvas.style.width = W + "px";
     canvas.style.height = H + "px";
+
 
     ctx.setTransform(
         dpr,
@@ -99,12 +146,48 @@ function resizeCanvas() {
     );
 }
 
+
+// ==========================================
+// CAMBIO DE TAMAÑO DE PANTALLA
+// ==========================================
+
 window.addEventListener(
     "resize",
-    resizeCanvas
+    () => {
+
+        resizeCanvas();
+
+        // Redibujar inmediatamente
+        // después de cambiar el tamaño
+        if (!running) {
+            drawBase();
+        }
+
+    }
 );
 
+
 resizeCanvas();
+
+
+// ==========================================
+// SISTEMA DE COORDENADAS RESPONSIVE
+// ==========================================
+
+function point(px, py) {
+
+    return {
+
+        x:
+            W / 2 +
+            px * S,
+
+        y:
+            H / 2 +
+            py * S
+
+    };
+}
 
 
 function point(px, py) {
@@ -129,7 +212,41 @@ function drawBackground() {
     );
 
 
+    // ESTRELLAS ✨
+    const time = performance.now() * 0.002;
 
+    stars.forEach(star => {
+
+        const glow =
+            0.4 +
+            Math.sin(time + star.phase) * 0.3;
+
+        ctx.globalAlpha = glow;
+        ctx.fillStyle = "#ffe9a3";
+
+        const x = star.x * W;
+        const y = star.y * H;
+        const size = star.size;
+
+        ctx.beginPath();
+
+        ctx.moveTo(x, y - size * 2.5);
+        ctx.lineTo(x + size * 0.6, y - size * 0.6);
+        ctx.lineTo(x + size * 2.5, y);
+        ctx.lineTo(x + size * 0.6, y + size * 0.6);
+        ctx.lineTo(x, y + size * 2.5);
+        ctx.lineTo(x - size * 0.6, y + size * 0.6);
+        ctx.lineTo(x - size * 2.5, y);
+        ctx.lineTo(x - size * 0.6, y - size * 0.6);
+
+        ctx.closePath();
+        ctx.fill();
+    });
+
+    ctx.globalAlpha = 1;
+
+
+    // PINCELADAS DEL CIELO
     for (let i = 0; i < 260; i++) {
 
         const px = random(0, W);
@@ -181,7 +298,6 @@ function drawBackground() {
 }
 
 
-
 function drawTable() {
 
     const y = H * 0.76;
@@ -196,7 +312,7 @@ function drawTable() {
     );
 
 
-    
+
     for (let i = 0; i < 80; i++) {
 
         const px = random(
@@ -431,17 +547,28 @@ function drawStem(
 
     ctx.lineCap = "round";
 
+    // Desplazamiento SOLO en la parte inferior del tallo
+    const bottomOffset = curve * 0.75;
+
+    // El punto superior permanece EXACTAMENTE en el mismo lugar
+    const topX = centerX;
+
+    // El punto inferior se mueve hacia izquierda/derecha
+    const bottomX = centerX + bottomOffset;
+
     ctx.beginPath();
 
+    // INICIO: dentro del jarrón
     ctx.moveTo(
-        centerX,
+        bottomX,
         top
     );
 
+    // FINAL: NO cambia, sigue conectado al girasol
     ctx.quadraticCurveTo(
         centerX + curve * 0.35,
         (top + flowerY) / 2,
-        centerX + curve,
+        topX,
         flowerY
     );
 
@@ -754,22 +881,17 @@ function drawBase() {
 
     drawTable();
 
-
-    const vaseTop =
-        H * 0.77 - 15;
-
+    // Posición del jarrón
     const vaseBase =
         H * 0.91;
 
+    const vaseTop =
+        vaseBase - (180 * S);
 
 
-    drawVase(
-        W / 2,
-        vaseBase,
-        95 * S,
-        180 * S
-    );
-
+    // ==========================================
+    // 1. PRIMERO: TALLOS Y HOJAS
+    // ==========================================
 
     flowers.forEach(
         flower => {
@@ -781,6 +903,7 @@ function drawBase() {
                 );
 
 
+            // Tallo
             drawStem(
                 p.x,
                 p.y,
@@ -789,24 +912,60 @@ function drawBase() {
             );
 
 
+            // Hoja izquierda
+            // Hoja 1: sigue la inclinación del tallo
+            // ==========================================
+            // HOJAS SIGUIENDO EL TALLO
+            // ==========================================
+
+            const curve = flower.curve * S;
+
+
+            // ============================
+            // HOJA SUPERIOR
+            // ============================
+
             drawLeaf(
-                p.x - 18 * S,
-                p.y + 95 * S,
-                2.8,
+                p.x + curve * 0.30,
+                p.y + 75 * S,
+
+                // cambia ligeramente según la curva
+                2.8 + flower.curve * 0.002,
+
                 0.65 * S
             );
 
 
+            // ============================
+            // HOJA INFERIOR
+            // ============================
+
             drawLeaf(
-                p.x + 8 * S,
-                p.y + 135 * S,
-                3.65,
+                p.x + curve * 0.55,
+                p.y + 125 * S,
+
+                3.65 + flower.curve * 0.002,
+
                 0.55 * S
             );
         }
     );
-}
 
+
+    // ==========================================
+    // 2. DESPUÉS: JARRÓN
+    // ==========================================
+    // Al dibujarlo después de los tallos,
+    // el borde del jarrón queda DELANTE
+    // de los tallos.
+
+    drawVase(
+        W / 2,
+        vaseBase,
+        350 * S,   // ANCHO
+        180 * S    // ALTO
+    );
+}
 
 
 function createSplash(
@@ -1024,13 +1183,11 @@ function animatePainting() {
 
 
                 label.textContent =
-                    `Pintando girasol ${
-                        Math.min(
-                            flowerIndex + 1,
-                            flowers.length
-                        )
-                    } de ${
+                    `Pintando girasol ${Math.min(
+                        flowerIndex + 1,
                         flowers.length
+                    )
+                    } de ${flowers.length
                     }...`;
 
             } else {
